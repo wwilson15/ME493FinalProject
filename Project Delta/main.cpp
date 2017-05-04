@@ -72,15 +72,17 @@ double simulator(double u);
 double calc_theta(agent boata, goal buoy);
 double calc_distance(agent boata, goal buoy);
 bool check_goal(agent boata, goal buoy);
+void straightboat();
 
 
-int main() {/// ----------------------------------------------MAIN---------------------------------------
+int main() {/// ------------------------------------------MAIN---------------------------------------
     cout << "Main Start" << endl;
     srand(unsigned(time(NULL)));
     
+    straightboat();
     
     int pop_size=100;
-    int max_generations=26;
+    int max_generations=30;
     agent boat;
     boat.init();
     
@@ -98,6 +100,8 @@ int main() {/// ----------------------------------------------MAIN--------------
     NN.set_out_min_max(-15, 15);
 
     
+    ofstream outputFile;
+    outputFile.open("LC.txt");
     vector<policy> population;
     int num_weights = NN.get_number_of_weights();
     
@@ -107,9 +111,9 @@ int main() {/// ----------------------------------------------MAIN--------------
     //population=EA_replicate(population, pop_size);
         
     for(int pop=0; pop<pop_size; pop++){ /// POPULATION LOOP
-        for(int initf=0; initf<population.size(); initf++){ // resets fitness off all pops
+        /*for(int initf=0; initf<population.size(); initf++){ // resets fitness off all pops
             population.at(initf).fitness = -1;
-        }
+        }*/
     NN.set_weights(population.at(pop).weights, true);
         boat.init();
         boat.offmap=false;
@@ -121,6 +125,7 @@ int main() {/// ----------------------------------------------MAIN--------------
         assert(boat.x <1000);
         assert(boat.y <1000);
         vector<double> state;
+        
         boat.delta_theta=calc_theta(boat, buoy);
         boat.distance=calc_distance(boat, buoy);
         state.push_back(boat.delta_theta);
@@ -131,12 +136,12 @@ int main() {/// ----------------------------------------------MAIN--------------
         boat.checku();
         boat.simulate(v, dt, T);
         boat.checkpos();
-        population.at(pop).fitness=population.at(pop).fitness+(boat.distance);
-        if(generation == 25 ){
+        population.at(pop).fitness=(boat.distance);
+        /*if(generation == 25 ){
             if(pop==0){
         cout << boat.x << "\t" << boat.y << "\t" << boat.u <<endl;
         }
-        }
+        }*/
         boat.check_goal(buoy);
         if(boat.win){
             population.at(pop).fitness=population.at(pop).fitness-100;
@@ -154,17 +159,25 @@ int main() {/// ----------------------------------------------MAIN--------------
                 
         
     }//sim loop
-        //population.at(pop).fitness=population.at(pop).fitness+(boat.distance)*4;
+        
     }//pop loop
         population=EA_downselect(population, pop_size);
         assert(population.size() == pop_size/2);
         population=EA_replicate(population, pop_size);
         assert(population.size() == pop_size);
 
+        if(outputFile.is_open()){
+            for(int i=0; i<population.size(); i++){
+                outputFile << population.at(i).fitness << "\t";
+            }
+            outputFile << "\t"<<"\t" << endl;
+            cout << "This generation output to text file" << endl;
+        }
     }//gen loop
     
     
     
+    outputFile.close();
     
     return 0;
 }
@@ -317,4 +330,32 @@ void agent::check_goal(goal buoy){
     }
     //return false;
 }
+
+void straightboat(){
+    srand(unsigned(time(NULL)));
+    agent boat;
+    boat.init();
+    
+    // Established Values
+    double v =3;
+    double dt=.2;
+    double T=5;
+    int tsmax = 5000;;
+    
+    goal buoy;
+    ofstream outputFile;
+    outputFile.open("StraightLine.txt");
+    
+    for(int tstep=0; tstep<tsmax; tstep++){ ///SIMULATOR LOOP
+        double px=boat.x;
+        //cout << tstep << endl;
+        boat.u=0;
+        boat.simulate(v, dt, T);
+        assert(px==boat.x);  // previous x == current x means boat is not turning
+        
+    }
+    
+    outputFile.close();
+}
+
 
