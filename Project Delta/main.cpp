@@ -116,7 +116,7 @@ void testing_b2g(){
     
 }
 
-double generateGaussianNoise(double mu, double sigma)
+double generateGaussianNoise(double mu, double sigma) //// From wikipedia
 {
     const double epsilon = std::numeric_limits<double>::min();
     const double two_pi = 2.0*3.14159265358979323846;
