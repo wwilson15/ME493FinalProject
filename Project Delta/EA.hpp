@@ -48,7 +48,7 @@ void policy::init(int num_weights){
 void policy::mutate(){
     for(int i=0; i<weights.size(); i++){
         if(rand()%2==0){
-            weights.at(i)+=.025*WWRAND - .025*WWRAND;
+            weights.at(i)+=.01*WWRAND - .01*WWRAND;
         }
     }
     
