@@ -149,12 +149,12 @@ int main() {/// ------------------------------------------MAIN------------------
     //straightboat();
     //testingb2h();
     //testing_b2g();
-    bool current = true;
-    bool sensor_noise=true;
-    bool actuator_noise=true;
+    bool current = false;
+    bool sensor_noise=false;
+    bool actuator_noise=false;
     
     int pop_size=100;
-    int max_generations=30;
+    int max_generations=100;
     
     agent boat;
     boat.init();
@@ -197,7 +197,7 @@ int main() {/// ------------------------------------------MAIN------------------
         assert(boat.y <1000);
         vector<double> state;
         if(sensor_noise){
-            boat.delta_theta=calc_theta(boat, buoy)+generateGaussianNoise(0, .0000000000001);
+            boat.delta_theta=calc_theta(boat, buoy)+generateGaussianNoise(0, .1);
         }
         else{
         boat.delta_theta=calc_theta(boat, buoy);
@@ -206,7 +206,7 @@ int main() {/// ------------------------------------------MAIN------------------
         NN.set_vector_input(state);
         NN.execute();
         if(actuator_noise){
-            boat.u=NN.get_output(0)+generateGaussianNoise(0, .000000000000001);
+            boat.u=NN.get_output(0)+generateGaussianNoise(0, 5*PI/180);
         }
         else{
             boat.u=NN.get_output(0);
@@ -216,28 +216,29 @@ int main() {/// ------------------------------------------MAIN------------------
         
         if(current){
             //cout << "test" << endl;
-            boat.y+=generateGaussianNoise(0, .000000000001);
+            boat.y+=generateGaussianNoise(.2, .1);
         }
         
         boat.checkpos();
         population.at(pop).fitness=population.at(pop).fitness + fabs(boat.delta_theta);
-        if(generation == 7 ){
+        if(generation == 7 || generation == 60){
             if(pop==0){
         cout << boat.x << "\t" << boat.y << "\t" << boat.u << "\t" << boat.theta << "\t" << boat.delta_theta <<endl;
         }
         }
         boat.check_goal(buoy);
         if(boat.win){
-            population.at(pop).fitness=population.at(pop).fitness;
-           // cout<<"winner"<<endl;
+            population.at(pop).fitness-=1000;
+            //cout<<"winner"<<endl;
             break;
         }
         if( boat.offmap){
-            population.at(pop).fitness=10000;
+            population.at(pop).fitness+=5*(1000-boat.x)*(500-fabs(500-boat.y)+1);
             break;
         }
         //population.at(pop).fitness=tstep;
-        if(tstep > tsmax){
+        if(tstep == tsmax-1){
+            population.at(pop).fitness+=10000000;
             break;
         }
         
@@ -262,7 +263,7 @@ int main() {/// ------------------------------------------MAIN------------------
     
     outputFile.close();
     double initf=1000;
-     int sto;
+     int sto =0;
     for(int y=0;y<population.size();y++){
         if(population.at(y).fitness < initf){
             initf=population.at(y).fitness;
@@ -273,6 +274,9 @@ int main() {/// ------------------------------------------MAIN------------------
     ////-------------------------getting best run sim ------------
     ofstream outputfile;
     outputFile.open("bestrun.txt");
+    boat.init();
+    NN.set_weights(population.at(sto).weights, true);
+    boat.offmap=false;
     for(int k=0;k<tsmax;k++){
         vector<double> state;
         if(sensor_noise){
@@ -294,11 +298,11 @@ int main() {/// ------------------------------------------MAIN------------------
         boat.simulate(v, dt, T);
         
         if(current){
-            cout << "current on" << endl;
+            //cout << "current on" << endl;
             boat.y+=generateGaussianNoise(.1, .1);
         }
         if(outputFile.is_open()){
-            outputFile << boat.x << "\t" << boat.y << "\t" << boat.theta << "\t" << "\t";
+            outputFile << boat.x << "\t" << boat.y << "\t" << boat.theta << "\t" << "\t"<<endl;
         }
         boat.checkpos();
         
@@ -312,14 +316,15 @@ int main() {/// ------------------------------------------MAIN------------------
         }
     
     }///////////-----------best run sim end------------------------
+    cout<< population.at(sto).fitness << endl;
     cout<<"Best run output to bestrun.txt" << endl;
     outputFile.close();
     return 0;
 }
 void agent::init(){
-    x=50;
-    y=600;
-    theta=-PI/4;
+    x=300;
+    y=300;
+    theta=0;
     omega=0;
 }
 
@@ -368,60 +373,46 @@ double calc_theta(agent boata, goal buoy){
     double t2;
     t1=boata.theta;  //BV
     t2=v2g(boata.x,boata.y); //VG
-    if(boata.y<=500){
+    if(boata.y<=500){//// BELOW
         if(boata.theta < PI/2 && boata.theta > -PI/2){  ///Q1,2
-            double r2;
-            r2=t2-PI;
-            if(boata.theta>r2 && boata.theta<0){
             dtheta=t2-t1;
-            }
-            else if(boata.theta<r2){
-                dtheta=-(2*PI-(t2-t1));
-            }
-            if(dtheta>PI){
-                cout<<"Q1,2  " << t1 << "\t" << t2 << "\t" << dtheta<< endl;
-            }
-            if(dtheta<-PI){
-                cout<<"Q1,2  " << t1 << "\t" << t2 << "\t" << dtheta<< endl;
-            }
         }
-        else if(boata.theta > PI/2){/// Q4
+        else if(boata.theta>= PI/2){/// Q4
             dtheta=t1-t2;
-            if(dtheta>PI){
-            cout <<"Q4  "<< t1 << "\t" << t2 << "\t" << dtheta<< endl;
-            }
         }
-        else if(boata.theta < -PI/2){ /// Q3
+        else if(boata.theta <= -PI/2){ /// Q3
             t2=atan2(boata.x,boata.y);
             double r1;
             r1=-PI+t2;
-            if(boata.theta>r1){
+            if(boata.theta>=r1){
                 dtheta=t2+t1;
             }
             else if(boata.theta<r1){
                 dtheta=(2*PI-t2+t1);
             }
-            if(dtheta<-PI){
-                cout <<"Q3  "<< t1 << "\t" << t2 << "\t" << dtheta<< endl;
-            }
         }
     }
-    else if(boata.y>500){
+    else if(boata.y>500){///// ABOVE
+        //cout<< boata.theta << endl;
         if(boata.theta > -PI/2 && boata.theta<PI/2){///Q1&2
-            dtheta=t2-t1;
-        }
-        if(dtheta>PI){
-            cout<<"Q1,2  " << t1 << "\t" << t2 << "\t" << dtheta<< endl;
-        }
-        if(dtheta<-PI){
-            cout<<"Q1,2  " << t1 << "\t" << t2 << "\t" << dtheta<< endl;
+            //cout << "here"<<endl;
+            double r2;
+            r2=t2-PI;
+
+            if(boata.theta>r2){
+                dtheta=t2-t1;
+            }
+            else if(boata.theta<r2){
+                dtheta=-(2*PI+t1-t2);
+            }
+            
         }
         else if(boata.theta<-PI/2){ ///Q2&Q3
             //cout << "T2  " << t2 << endl;
             dtheta=(2*PI-t2+t1);
             
         }
-        else if(boata.theta>PI/2){
+        else if(boata.theta>=PI/2){
             dtheta=t1-t2;
         }
     }
@@ -431,6 +422,10 @@ double calc_theta(agent boata, goal buoy){
     if(dtheta>PI){
         //cout<<"t1 "<<t1<< "   t2 " << t2 << "\t" << dtheta << endl;
     }
+    assert(dtheta<PI);
+    assert(dtheta>-PI);
+    //cout << t1<<"\t" << t2<<"\t" <<dtheta<<endl;
+    assert(dtheta!=0);
     return dtheta;
 }
 

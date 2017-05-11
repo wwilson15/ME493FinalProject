@@ -40,15 +40,20 @@ public:
 void policy::init(int num_weights){
     vector<double> b;
     for(int i=0;i<num_weights;i++){
-        b.push_back(WWRAND-WWRAND);
+        b.push_back((WWRAND-WWRAND)*1);
     }
     weights=b;
 }
 
 void policy::mutate(){
     for(int i=0; i<weights.size(); i++){
-        if(rand()%2==0){
-            weights.at(i)+=.01*WWRAND - .01*WWRAND;
+        if(rand()%10>=2){
+            if(rand()%2==0){
+                weights.at(i)+=.075*WWRAND - .075*WWRAND;
+            }
+            else{
+                weights.at(i)+=.25*WWRAND - .25*WWRAND;
+            }
         }
     }
     
