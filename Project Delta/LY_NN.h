@@ -272,7 +272,7 @@ void node::true_sigmoid(){
 }
 
 void neural_network::setup(int inp, int hid, int outp){
-    /// clean up for initials.
+    // clean up for initials.
     input.layer_nodes.clear();
     hidden.layer_nodes.clear();
     output.layer_nodes.clear();
